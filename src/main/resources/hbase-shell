@@ -1,2 +1,0 @@
-#!/bin/sh
-java -Dlogback.configurationFile=/usr/lib/hbase-shell/logback.xml -jar /usr/lib/hbase-shell/hbase-shell.jar $*

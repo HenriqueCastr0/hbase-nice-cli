@@ -1,4 +1,4 @@
-package hbasenicecli;
+package wonderteam.hbase.cli;
 
 import org.apache.hadoop.hbase.client.Result;
 

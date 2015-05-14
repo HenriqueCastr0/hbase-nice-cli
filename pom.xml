@@ -2,9 +2,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>hcastro</groupId>
-	<artifactId>hbase-shell</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<groupId>wonderteam</groupId>
+	<artifactId>hbase-cli</artifactId>
+	<version>1.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<properties>
@@ -44,16 +44,13 @@
                         </goals>
                         <configuration>
                             <tasks>
-                                <copy file="target/hbase-shell-1.0-SNAPSHOT.jar"
-                                      tofile="/usr/lib/hbase-shell/hbase-shell.jar"
+                                <copy file="target/hbase-cli-1.1-SNAPSHOT.jar"
+                                      tofile="/usr/lib/hbase-cli/hbase-cli.jar"
                                       overwrite="true"/>
-                                <!--<copy file="src/main/resources/logback.xml"-->
-                                        <!--tofile="/usr/lib/hbase-shell/logback.xml"-->
-                                      <!--overwrite="true"/>-->
-                                <copy file="src/main/resources/hbase-shell"
-                                      tofile="/usr/bin/hbase-shell"
+                                <copy file="src/main/resources/hbase-cli"
+                                      tofile="/usr/bin/hbase-cli"
                                       overwrite="true"/>
-                                <chmod file="/usr/bin/hbase-shell" perm="+x"/>
+                                <chmod file="/usr/bin/hbase-cli" perm="+x"/>
                             </tasks>
                         </configuration>
                     </execution>

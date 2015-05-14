@@ -1,19 +1,24 @@
-package hbasenicecli;
+package wonderteam.hbase.cli;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import javax.tools.*;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.mapreduce.RowCounter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
@@ -37,19 +42,86 @@ public class HBaseLayer {
 //        conf.set("hbase.zookeeper.quorum", "127.0.0.1");
     }
 
-    public static void main(String[] args) throws Exception {
-        // general options
+
+    private ClassLoader getClassLoader(String jarPath) throws MalformedURLException {
+        URL jarUrl = new File(jarPath).toURI().toURL();
+        return URLClassLoader.newInstance(new URL[]{ jarUrl}, getClass().getClassLoader());
+    }
+
+    private Filter getFilter(@Nonnull String jarPath, @Nonnull String classFullName){
+        ClassLoader loader = null;
+        try {
+            loader = getClassLoader(jarPath);
+            Class<?> clazz = Class.forName(classFullName, true, loader);
+            Class<? extends Filter> clazzRowFormat = clazz.asSubclass(Filter.class);
+            Constructor<? extends Filter> ctor = clazzRowFormat.getConstructor();
+            return ctor.newInstance();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     *
+     * @param jarPath
+     * @param classFullName fully qualified name of the desired class
+     * @return
+     */
+    private RowFormat getRowFormat(@Nullable String jarPath, @Nullable String classFullName){
+        if(jarPath==null || classFullName==null){
+            return new DefaultRowFormat();
+        }
+        try {
+            ClassLoader loader = getClassLoader(jarPath);
+            Class<?> clazz = Class.forName(classFullName, true, loader);
+            Class<? extends RowFormat> clazzRowFormat = clazz.asSubclass(RowFormat.class);
+            Constructor<? extends RowFormat> ctor = clazzRowFormat.getConstructor();
+            RowFormat rowFormatInstance = ctor.newInstance();
+            return rowFormatInstance;
+        }
+        catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static void addGeneralOptions(Options options){
         Options generalOptions = new Options();
         generalOptions.addOption("q", "quorum", true, "HBase quorum");
+        for(Object generalOption : generalOptions.getOptions()){
+            options.addOption((Option) generalOption);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+
 
         // options for list
         Options listOptions = new Options();
         listOptions.addOption("l", "limit", true, "Maximum number of tables to return");
         listOptions.addOption("s", "sort", true, "Sort the tables");
-        // add general options
-        for(Object generalOption : generalOptions.getOptions()){
-            listOptions.addOption((Option) generalOption);
-        }
+        addGeneralOptions(listOptions);
 
         // options for scan
         Options scanOptions = new Options();
@@ -57,27 +129,19 @@ public class HBaseLayer {
         tableOption.setRequired(true);
         scanOptions.addOption(tableOption);
         scanOptions.addOption("l", "limit", true, "Maximum number of rows");
-        scanOptions.addOption("f", "fileFormat", true, "Use file to format output");
-        scanOptions.addOption("c", "columnFamily", true, "Set column family");
-        // add general options
-        for(Object generalOption : generalOptions.getOptions()){
-            scanOptions.addOption((Option) generalOption);
-        }
+        scanOptions.addOption("cf", "columnFamily", true, "Set column family");
+        scanOptions.addOption("j", "jarFile", true, "Jar file location");
+        scanOptions.addOption("ff", "fileFormat", true, "Use file to format output");
+        scanOptions.addOption("fi", "filter", true, "Use filter");
+        addGeneralOptions(scanOptions);
 
         // options for count
         Options countOptions = new Options();
         countOptions.addOption(tableOption);
-        // add general options
-        for(Object generalOption : generalOptions.getOptions()){
-            countOptions.addOption((Option) generalOption);
-        }
-
-        // parse the general options
-
+        addGeneralOptions(countOptions);
 
         CommandLineParser parser = new BasicParser();
         CommandLine cmd;
-
 
         switch(args[0]){
             case LIST: {
@@ -104,22 +168,29 @@ public class HBaseLayer {
                     parseGeneralOptions(cmd);
                     String tableName = null;
                     Long limit = Long.MAX_VALUE;
-                    RowFormat rowFormat = new DefaultRowFormat();
                     String columnFamily = null;
+                    String jarPath = null;
+                    String formatClassName = null;
+                    String filterClassName = null;
                     if(cmd.hasOption("t")){
                         tableName = cmd.getOptionValue("t");
                     }
                     if(cmd.hasOption("l")){
                         limit = Long.valueOf(cmd.getOptionValue("l"));
                     }
-                    if(cmd.hasOption("f")){
-                        String fileFormat = cmd.getOptionValue("f");
-                        loadRowFormat(fileFormat);
+                    if(cmd.hasOption("cf")){
+                        columnFamily = cmd.getOptionValue("cf");
                     }
-                    if(cmd.hasOption("c")){
-                        columnFamily = cmd.getOptionValue("c");
+                    if(cmd.hasOption("ff")){
+                        formatClassName = cmd.getOptionValue("ff");
                     }
-                    new HBaseLayer().scan(tableName, limit, rowFormat, columnFamily);
+                    if(cmd.hasOption("j")){
+                        jarPath = cmd.getOptionValue("j");
+                    }
+                    if(cmd.hasOption("fi")){
+                        filterClassName = cmd.getOptionValue("fi");
+                    }
+                    new HBaseLayer().scan(tableName, limit, columnFamily, jarPath, formatClassName, filterClassName);
                 } catch (ParseException e) {
                     System.out.println(e.getMessage());
                 }
@@ -141,66 +212,6 @@ public class HBaseLayer {
             break;
         }
 
-    }
-
-    private static RowFormat loadRowFormat(String fileFormat) {
-            File rowFormatImplFile = new File(fileFormat);
-            if (rowFormatImplFile.getParentFile().exists() || rowFormatImplFile.getParentFile().mkdirs()) {
-
-                try {
-
-
-                    /** Compilation Requirements *********************************************************************************************/
-                    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
-                    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-                    StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null);
-
-                    // This sets up the class path that the compiler will use.
-                    // I've added the .jar file that contains the DoStuff interface within in it...
-                    List<String> optionList = new ArrayList<String>();
-                    optionList.add("-classpath");
-                    optionList.add(System.getProperty("java.class.path") + ";dist/InlineCompiler.jar");
-
-                    Iterable<? extends JavaFileObject> compilationUnit
-                            = fileManager.getJavaFileObjectsFromFiles(Arrays.asList(rowFormatImplFile));
-                    JavaCompiler.CompilationTask task = compiler.getTask(
-                            null,
-                            fileManager,
-                            diagnostics,
-                            optionList,
-                            null,
-                            compilationUnit);
-                    /********************************************************************************************* Compilation Requirements **/
-                    if (task.call()) {
-                        /** Load and execute *************************************************************************************************/
-                        System.out.println("Yipe");
-                        // Create a new custom class loader, pointing to the directory that contains the compiled
-                        // classes, this should point to the top of the package structure!
-                        URLClassLoader classLoader = new URLClassLoader(new URL[]{new File("./").toURI().toURL()});
-                        // Load the class from the classloader by name....
-                        Class<?> loadedClass = classLoader.loadClass(fileFormat);
-                        // Create a new instance...
-                        Object obj = loadedClass.newInstance();
-                        // Santity check
-                        if (obj instanceof RowFormat) {
-                            // Cast to the DoStuff interface
-                            RowFormat stuffToDo = (RowFormat)obj;
-                            return stuffToDo;
-                        }
-                        /************************************************************************************************* Load and execute **/
-                    } else {
-                        for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
-                            System.out.format("Error on line %d in %s%n",
-                                    diagnostic.getLineNumber(),
-                                    diagnostic.getSource().toUri());
-                        }
-                    }
-                    fileManager.close();
-                } catch (IOException | ClassNotFoundException | InstantiationException | IllegalAccessException exp) {
-                    exp.printStackTrace();
-                }
-            }
-        return null;
     }
 
     private static void parseGeneralOptions(CommandLine cmd) throws MasterNotRunningException, ZooKeeperConnectionException {
@@ -248,17 +259,23 @@ public class HBaseLayer {
         System.out.println(rows.getValue());
     }
 
-    private void scan(String tableName, Long limit, RowFormat rowFormat, String columnFamily) throws IOException {
+    private void scan(String tableName, Long limit, @Nullable String columnFamily, @Nullable String jarPath, @Nullable String formatClassName,
+            @Nullable String filterClassName)
+            throws IOException {
+        final RowFormat rowFormat = getRowFormat(jarPath, formatClassName);
         Scan scan = null;
-        ResultScanner resultScanner= null;
+        ResultScanner resultScanner;
         if(!admin.tableExists(tableName.getBytes())){
             throw new IllegalArgumentException("Table " + tableName + " does not exist");
         }
-        HTableDescriptor table = admin.getTableDescriptor(tableName.getBytes());
         HTable hTable = new HTable(conf, tableName.getBytes());
         scan = new Scan();
         if(columnFamily != null){
             scan.addFamily(Bytes.toBytes(columnFamily));
+        }
+        if(jarPath != null && filterClassName != null){
+            Filter filter = getFilter(jarPath, filterClassName);
+            scan.setFilter(filter);
         }
         resultScanner  = hTable.getScanner(scan);
         Iterator<Result> iterator = resultScanner.iterator();
