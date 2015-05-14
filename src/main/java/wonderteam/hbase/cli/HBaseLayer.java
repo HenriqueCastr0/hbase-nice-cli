@@ -259,7 +259,7 @@ public class HBaseLayer {
         System.out.println(rows.getValue());
     }
 
-    private void scan(String tableName, Long limit, @Nullable String columnFamily, @Nullable String jarPath, @Nullable String formatClassName,
+    private void scan(String tableName, Long limit, @Nonnull String columnFamily, @Nullable String jarPath, @Nullable String formatClassName,
             @Nullable String filterClassName)
             throws IOException {
         final RowFormat rowFormat = getRowFormat(jarPath, formatClassName);
@@ -270,9 +270,8 @@ public class HBaseLayer {
         }
         HTable hTable = new HTable(conf, tableName.getBytes());
         scan = new Scan();
-        if(columnFamily != null){
-            scan.addFamily(Bytes.toBytes(columnFamily));
-        }
+        scan.addFamily(Bytes.toBytes(columnFamily));
+
         if(jarPath != null && filterClassName != null){
             Filter filter = getFilter(jarPath, filterClassName);
             scan.setFilter(filter);
@@ -283,7 +282,7 @@ public class HBaseLayer {
         Stream<Result> stream = StreamSupport.stream(iterable.spliterator(), false);
 
         stream = stream.limit(limit);
-        stream.forEach(result -> System.out.println(rowFormat.format(result)));
+        stream.forEach(result -> System.out.println(rowFormat.format(result, Collections.singletonList(columnFamily))));
     }
 
     public enum Sort{

@@ -1,5 +1,6 @@
 package wonderteam.hbase.cli;
 
+import java.util.List;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -7,7 +8,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class DefaultRowFormat implements RowFormat {
 
     @Override
-    public String format(Result row) {
+    public String format(Result row, List<String> columnFamilies) {
         StringBuilder res = new StringBuilder();
         res.append("Key = " + Bytes.toStringBinary(row.getRow()) + "\n");
         NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = row.getMap();
