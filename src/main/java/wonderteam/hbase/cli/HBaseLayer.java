@@ -304,6 +304,5 @@ public class HBaseLayer {
             return o2.getNameAsString().compareTo(o1.getNameAsString());
         }
     }
-
 }
 

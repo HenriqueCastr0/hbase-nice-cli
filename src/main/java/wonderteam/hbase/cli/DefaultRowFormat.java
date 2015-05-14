@@ -25,3 +25,4 @@ public class DefaultRowFormat implements RowFormat {
         return res.toString();
     }
 }
+
