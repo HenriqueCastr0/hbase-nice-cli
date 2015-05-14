@@ -1,3 +1,4 @@
+package hbasenicecli;
 
 import org.apache.hadoop.hbase.client.Result;
 

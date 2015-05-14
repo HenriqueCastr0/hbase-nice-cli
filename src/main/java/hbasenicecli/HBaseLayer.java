@@ -1,4 +1,4 @@
-package hbase
+package hbasenicecli;
 
 import java.io.File;
 import java.io.IOException;
@@ -260,7 +260,6 @@ public class HBaseLayer {
         if(columnFamily != null){
             scan.addFamily(Bytes.toBytes(columnFamily));
         }
-
         resultScanner  = hTable.getScanner(scan);
         Iterator<Result> iterator = resultScanner.iterator();
         Iterable<Result> iterable = () -> iterator;
