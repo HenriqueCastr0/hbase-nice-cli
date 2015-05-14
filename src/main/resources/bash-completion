@@ -12,7 +12,6 @@ _args()
     list_opts="-l --limit -s --sort"
     count_opts=""
     table_opts=""
-    _readTableNames table_opts
 
 
     if [[ ${prev} == "hbase-cli" ]] ; then
@@ -21,8 +20,18 @@ _args()
     fi
 
     if [[ ${prev} == "-t" || ${prev} == "--table" ]] ; then
-        COMPREPLY=( $(compgen -W "${table_opts}" -- ${cur}) )
+	local quorum=""
+	_findQuorum quorum
+	if [[ ${#quorum} -gt 0 ]] ; then
+		_readTableNames table_opts $quorum
+	        COMPREPLY=( $(compgen -W "${table_opts}" -- ${cur}) )
+	fi
         return 0
+    fi
+
+    if [[ ${prev} == "-q" || ${prev} == "--quorum" ]] ; then
+	    _known_hosts
+	    return 0
     fi
 
 
@@ -45,13 +54,26 @@ _args()
 
 _readTableNames()
 {
- dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
  res=""
- while read line
- do
-    res+="${line} "
- done < "${dir}/hbase-cli-table-names"
+ file="/usr/lib/hbase-cli/${2}-hbase-cli-table-names"
+ if [ -f $file ]; then
+ 	while read line
+ 	do
+    	res+="${line} "
+ 	done < "${file}"
+ fi
  eval "$1='${res}'"
+}
+
+_findQuorum()
+{
+   for ((i = 0 ; i < ${#COMP_WORDS} ; i++ )) ;
+   do
+	if [[ ${COMP_WORDS[$i]} == "-q" || ${COMP_WORDS[$i]} == "--quorum" ]] ; then
+		quorum="${COMP_WORDS[$i+1]}"
+		eval "$1='${quorum}'"
+	fi
+   done
 }
 
 complete -F _args hbase-cli

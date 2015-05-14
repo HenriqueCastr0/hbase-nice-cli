@@ -255,7 +255,8 @@ public class HBaseLayer {
     }
 
     private void writeToAutoCompletionFileForTableNames(String tableNames) throws IOException {
-        File file = new File("/etc/bash_completion.d/hbase-cli-table-names");
+        String quorum = conf.get("hbase.zookeeper.quorum");
+        File file = new File("/usr/lib/hbase-cli/" + quorum + "-hbase-cli-table-names");
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         fileOutputStream.write(tableNames.getBytes(Charset.forName("UTF-8")));
     }
