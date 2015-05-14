@@ -51,6 +51,9 @@
                                       tofile="/usr/bin/hbase-cli"
                                       overwrite="true"/>
                                 <chmod file="/usr/bin/hbase-cli" perm="+x"/>
+                                <copy file="src/main/resources/bash-completion"
+                                      tofile="/etc/bash_completion.d/hbase-cli"
+                                      overwrite="true"/>
                             </tasks>
                         </configuration>
                     </execution>

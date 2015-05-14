@@ -1,0 +1,57 @@
+_args()
+{
+    local cur prev opts command
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    command="${COMP_WORDS[1]}"
+    opts="--scana --list --counta"
+    command_opts="scan list count"
+    general_opts="-q --quorum"
+    scan_opts="-t -l -cf -ff -j -fi -ff --table --limit --columnFamily --jarFile --fileFormat --filter"
+    list_opts="-l --limit -s --sort"
+    count_opts=""
+    table_opts=""
+    _readTableNames table_opts
+
+
+    if [[ ${prev} == "hbase-cli" ]] ; then
+        COMPREPLY=( $(compgen -W "${command_opts}" -- ${cur}) )
+        return 0
+    fi
+
+    if [[ ${prev} == "-t" || ${prev} == "--table" ]] ; then
+        COMPREPLY=( $(compgen -W "${table_opts}" -- ${cur}) )
+        return 0
+    fi
+
+
+    if [[ ${command} == "scan" ]] ; then
+        COMPREPLY=( $(compgen -W "${general_opts} ${scan_opts}" -- ${cur}) )
+        return 0
+    fi
+
+    if [[ ${command} == "list" ]] ; then
+        COMPREPLY=( $(compgen -W "${general_opts} ${list_opts}" -- ${cur}) )
+        return 0
+    fi
+
+    if [[ ${command} == "count" ]] ; then
+        COMPREPLY=( $(compgen -W "${general_opts} ${count_opts}" -- ${cur}) )
+        return 0
+    fi
+
+}
+
+_readTableNames()
+{
+ dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ res=""
+ while read line
+ do
+    res+="${line} "
+ done < "${dir}/hbase-cli-table-names"
+ eval "$1='${res}'"
+}
+
+complete -F _args hbase-cli

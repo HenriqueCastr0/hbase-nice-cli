@@ -1,12 +1,14 @@
 package wonderteam.hbase.cli;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -246,7 +248,16 @@ public class HBaseLayer {
                 stream = stream.sorted(new HTableDescriptorDescComparator());
                 break;
         }
-        stream.forEach(table -> System.out.println(table.getNameAsString()));
+        StringBuilder listOfTables = new StringBuilder();
+        stream.forEach(table -> listOfTables.append(table.getNameAsString() + "\n"));
+        System.out.println(listOfTables.toString());
+        writeToAutoCompletionFileForTableNames(listOfTables.toString());
+    }
+
+    private void writeToAutoCompletionFileForTableNames(String tableNames) throws IOException {
+        File file = new File("/etc/bash_completion.d/hbase-cli-table-names");
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
+        fileOutputStream.write(tableNames.getBytes(Charset.forName("UTF-8")));
     }
 
     private void count(String tableName) throws Exception {

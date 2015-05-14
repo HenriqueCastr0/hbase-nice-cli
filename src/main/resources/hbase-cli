@@ -1,2 +1,2 @@
 #!/bin/sh
-java -Dlogback.configurationFile=/usr/lib/hbase-shell/logback.xml -Dconfig.file=/home/chris/hbase-cli/hbase-cli-config/src/main/resources/piella-config.json -jar /usr/lib/hbase-cli/hbase-cli.jar $*
+java -Dlogback.configurationFile=/usr/lib/hbase-shell/logback.xml -jar /usr/lib/hbase-cli/hbase-cli.jar $*
