@@ -1,4 +1,4 @@
-package hcastro;
+package hbase
 
 import java.io.File;
 import java.io.IOException;

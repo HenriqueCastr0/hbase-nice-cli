@@ -1,4 +1,3 @@
-package hcastro;
 
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.client.Result;
