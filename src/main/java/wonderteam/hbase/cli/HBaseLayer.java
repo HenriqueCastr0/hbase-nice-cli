@@ -64,69 +64,58 @@ public class HBaseLayer {
         try {
             switch (args[0]) {
                 case LIST: {
-                    try {
-                        cmd = parser.parse(getListOptions(), args);
-                        parseGeneralOptions(cmd);
-                        Integer limit = Integer.MAX_VALUE;
-                        Sort sort = Sort.NONE;
-                        if (cmd.hasOption(OPTION_LIMIT)) {
-                            limit = Integer.valueOf(cmd.getOptionValue(OPTION_LIMIT));
-                        }
-                        if (cmd.hasOption(OPTION_SORT)) {
-                            sort = Sort.valueOf(cmd.getOptionValue(OPTION_SORT).toUpperCase());
-                        }
-                        new HBaseLayer().list(limit, sort);
-                    } catch (ParseException e) {
-                        System.out.println(e.getMessage());
+                    cmd = parser.parse(getListOptions(), args);
+                    parseGeneralOptions(cmd);
+                    Integer limit = Integer.MAX_VALUE;
+                    Sort sort = Sort.NONE;
+                    if (cmd.hasOption(OPTION_LIMIT)) {
+                        limit = Integer.valueOf(cmd.getOptionValue(OPTION_LIMIT));
                     }
+                    if (cmd.hasOption(OPTION_SORT)) {
+                        sort = Sort.valueOf(cmd.getOptionValue(OPTION_SORT).toUpperCase());
+                    }
+                    new HBaseLayer().list(limit, sort);
                 }
                 break;
                 case SCAN: {
-                    try {
-                        cmd = parser.parse(getScanOptions(), args);
-                        parseGeneralOptions(cmd);
-                        String tableName = null;
-                        Long limit = Long.MAX_VALUE;
-                        String columnFamily = null;
-                        String jarPath = null;
-                        String formatClassName = null;
-                        String filterClassName = null;
-                        if (cmd.hasOption(OPTION_TABLE)) {
-                            tableName = cmd.getOptionValue(OPTION_TABLE);
-                        }
-                        if (cmd.hasOption(OPTION_LIMIT)) {
-                            limit = Long.valueOf(cmd.getOptionValue(OPTION_LIMIT));
-                        }
-                        if (cmd.hasOption(OPTION_COLUMN_FAMILY)) {
-                            columnFamily = cmd.getOptionValue(OPTION_COLUMN_FAMILY);
-                        }
-                        if (cmd.hasOption(OPTION_FILE_FORMAT)) {
-                            formatClassName = cmd.getOptionValue(OPTION_FILE_FORMAT);
-                        }
-                        if (cmd.hasOption(OPTION_JAR_FILE)) {
-                            jarPath = cmd.getOptionValue(OPTION_JAR_FILE);
-                        }
-                        if (cmd.hasOption(OPTION_FILTER)) {
-                            filterClassName = cmd.getOptionValue(OPTION_FILTER);
-                        }
-                        new HBaseLayer().scan(tableName, limit, columnFamily, jarPath, formatClassName, filterClassName);
-                    } catch (ParseException e) {
-                        System.out.println(e.getMessage());
+                    cmd = parser.parse(getScanOptions(), args);
+                    parseGeneralOptions(cmd);
+                    String tableName = null;
+                    Long limit = Long.MAX_VALUE;
+                    String columnFamily = null;
+                    String jarPath = null;
+                    String formatClassName = null;
+                    String filterClassName = null;
+                    if (cmd.hasOption(OPTION_TABLE)) {
+                        tableName = cmd.getOptionValue(OPTION_TABLE);
                     }
+                    if (cmd.hasOption(OPTION_LIMIT)) {
+                        limit = Long.valueOf(cmd.getOptionValue(OPTION_LIMIT));
+                    }
+                    if (cmd.hasOption(OPTION_COLUMN_FAMILY)) {
+                        columnFamily = cmd.getOptionValue(OPTION_COLUMN_FAMILY);
+                    }
+                    if (cmd.hasOption(OPTION_FILE_FORMAT)) {
+                        formatClassName = cmd.getOptionValue(OPTION_FILE_FORMAT);
+                    }
+                    if (cmd.hasOption(OPTION_JAR_FILE)) {
+                        jarPath = cmd.getOptionValue(OPTION_JAR_FILE);
+                    }
+                    if (cmd.hasOption(OPTION_FILTER)) {
+                        filterClassName = cmd.getOptionValue(OPTION_FILTER);
+                    }
+                    new HBaseLayer().scan(tableName, limit, columnFamily, jarPath, formatClassName, filterClassName);
                 }
                 break;
                 case COUNT: {
-                    try {
-                        cmd = parser.parse(getCountOptions(), args);
-                        parseGeneralOptions(cmd);
-                        String tableName = null;
-                        if (cmd.hasOption(OPTION_TABLE)) {
-                            tableName = cmd.getOptionValue(OPTION_TABLE);
-                        }
-                        new HBaseLayer().count(tableName);
-                    } catch (ParseException e) {
-                        System.out.println(e.getMessage());
+                    cmd = parser.parse(getCountOptions(), args);
+                    parseGeneralOptions(cmd);
+                    String tableName = null;
+                    if (cmd.hasOption(OPTION_TABLE)) {
+                        tableName = cmd.getOptionValue(OPTION_TABLE);
                     }
+                    new HBaseLayer().count(tableName);
+
                 }
                 break;
             }
