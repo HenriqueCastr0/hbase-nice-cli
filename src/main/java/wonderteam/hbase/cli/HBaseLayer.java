@@ -30,49 +30,130 @@ import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Job;
 
 public class HBaseLayer {
-
-
     private final static String HBASE_ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
-    private static HBaseAdmin admin;
-    private static Configuration conf = new Configuration();
-
     private static final String LIST = "list";
     private static final String SCAN = "scan";
     private static final String COUNT = "count";
     private static final String TABLE_NAMES_FOLDER = System.getProperty("autocompletion.info.path");
+    private static final String OPTION_QUOROM = "q";
+    private static final String OPTION_QUOROM_LONG = "quorum";
+    private static final String OPTION_LIMIT = "l";
+    private static final String OPTION_LIMIT_LONG = "limit";
+    private static final String OPTION_SORT = "s";
+    private static final String OPTION_SORT_LONG = "sort";
+    private static final String OPTION_TABLE = "t";
+    private static final String OPTION_TABLE_LONG = "table";
+    private static final String OPTION_COLUMN_FAMILY = "cf";
+    private static final String OPTION_COLUMN_FAMILY_LONG = "columnFamily";
+    private static final String OPTION_FILE_FORMAT = "ff";
+    private static final String OPTION_FILE_FORMAT_LONG = "fileFormat";
+    private static final String OPTION_JAR_FILE = "j";
+    private static final String OPTION_JAR_FILE_LONG = "jarFile";
+    private static final String OPTION_FILTER = "fi";
+    private static final String OPTION_FILTER_LONG = "filter";
+
+    private static HBaseAdmin admin;
+    private static Configuration conf = new Configuration();
+
+
+
+
+    public static void main(String[] args) {
+        CommandLineParser parser = new BasicParser();
+        CommandLine cmd;
+        try {
+            switch (args[0]) {
+                case LIST: {
+                    try {
+                        cmd = parser.parse(getListOptions(), args);
+                        parseGeneralOptions(cmd);
+                        Integer limit = Integer.MAX_VALUE;
+                        Sort sort = Sort.NONE;
+                        if (cmd.hasOption(OPTION_LIMIT)) {
+                            limit = Integer.valueOf(cmd.getOptionValue(OPTION_LIMIT));
+                        }
+                        if (cmd.hasOption(OPTION_SORT)) {
+                            sort = Sort.valueOf(cmd.getOptionValue(OPTION_SORT).toUpperCase());
+                        }
+                        new HBaseLayer().list(limit, sort);
+                    } catch (ParseException e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+                break;
+                case SCAN: {
+                    try {
+                        cmd = parser.parse(getScanOptions(), args);
+                        parseGeneralOptions(cmd);
+                        String tableName = null;
+                        Long limit = Long.MAX_VALUE;
+                        String columnFamily = null;
+                        String jarPath = null;
+                        String formatClassName = null;
+                        String filterClassName = null;
+                        if (cmd.hasOption(OPTION_TABLE)) {
+                            tableName = cmd.getOptionValue(OPTION_TABLE);
+                        }
+                        if (cmd.hasOption(OPTION_LIMIT)) {
+                            limit = Long.valueOf(cmd.getOptionValue(OPTION_LIMIT));
+                        }
+                        if (cmd.hasOption(OPTION_COLUMN_FAMILY)) {
+                            columnFamily = cmd.getOptionValue(OPTION_COLUMN_FAMILY);
+                        }
+                        if (cmd.hasOption(OPTION_FILE_FORMAT)) {
+                            formatClassName = cmd.getOptionValue(OPTION_FILE_FORMAT);
+                        }
+                        if (cmd.hasOption(OPTION_JAR_FILE)) {
+                            jarPath = cmd.getOptionValue(OPTION_JAR_FILE);
+                        }
+                        if (cmd.hasOption(OPTION_FILTER)) {
+                            filterClassName = cmd.getOptionValue(OPTION_FILTER);
+                        }
+                        new HBaseLayer().scan(tableName, limit, columnFamily, jarPath, formatClassName, filterClassName);
+                    } catch (ParseException e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+                break;
+                case COUNT: {
+                    try {
+                        cmd = parser.parse(getCountOptions(), args);
+                        parseGeneralOptions(cmd);
+                        String tableName = null;
+                        if (cmd.hasOption(OPTION_TABLE)) {
+                            tableName = cmd.getOptionValue(OPTION_TABLE);
+                        }
+                        new HBaseLayer().count(tableName);
+                    } catch (ParseException e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+                break;
+            }
+        }
+        catch(Exception e){
+            System.err.println(e.getMessage());
+        }
+
+    }
 
     public HBaseLayer() throws IOException {
         conf.setQuietMode(true);
     }
-
 
     private ClassLoader getClassLoader(String jarPath) throws MalformedURLException {
         URL jarUrl = new File(jarPath).toURI().toURL();
         return URLClassLoader.newInstance(new URL[]{ jarUrl}, getClass().getClassLoader());
     }
 
-    private Filter getFilter(@Nonnull String jarPath, @Nonnull String classFullName){
-        ClassLoader loader = null;
-        try {
-            loader = getClassLoader(jarPath);
-            Class<?> clazz = Class.forName(classFullName, true, loader);
-            Class<? extends Filter> clazzRowFormat = clazz.asSubclass(Filter.class);
-            Constructor<? extends Filter> ctor = clazzRowFormat.getConstructor();
-            return ctor.newInstance();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        return null;
+    private Filter getFilter(@Nonnull String jarPath, @Nonnull String classFullName)
+            throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException,
+            InstantiationException {
+        ClassLoader loader = getClassLoader(jarPath);
+        Class<?> clazz = Class.forName(classFullName, true, loader);
+        Class<? extends Filter> clazzRowFormat = clazz.asSubclass(Filter.class);
+        Constructor<? extends Filter> ctor = clazzRowFormat.getConstructor();
+        return ctor.newInstance();
     }
 
     /**
@@ -81,154 +162,78 @@ public class HBaseLayer {
      * @param classFullName fully qualified name of the desired class
      * @return
      */
-    private RowFormat getRowFormat(@Nullable String jarPath, @Nullable String classFullName){
+    private RowFormat getRowFormat(@Nullable String jarPath, @Nullable String classFullName)
+            throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException,
+            InstantiationException {
         if(jarPath==null || classFullName==null){
             return new DefaultRowFormat();
         }
-        try {
-            ClassLoader loader = getClassLoader(jarPath);
-            Class<?> clazz = Class.forName(classFullName, true, loader);
-            Class<? extends RowFormat> clazzRowFormat = clazz.asSubclass(RowFormat.class);
-            Constructor<? extends RowFormat> ctor = clazzRowFormat.getConstructor();
-            RowFormat rowFormatInstance = ctor.newInstance();
-            return rowFormatInstance;
-        }
-        catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        return null;
+        ClassLoader loader = getClassLoader(jarPath);
+        Class<?> clazz = Class.forName(classFullName, true, loader);
+        Class<? extends RowFormat> clazzRowFormat = clazz.asSubclass(RowFormat.class);
+        Constructor<? extends RowFormat> ctor = clazzRowFormat.getConstructor();
+        RowFormat rowFormatInstance = ctor.newInstance();
+        return rowFormatInstance;
     }
 
     private static void addGeneralOptions(Options options){
         Options generalOptions = new Options();
-        generalOptions.addOption("q", "quorum", true, "HBase quorum");
+        generalOptions.addOption(OPTION_QUOROM, OPTION_QUOROM_LONG, true, "HBase quorum");
         for(Object generalOption : generalOptions.getOptions()){
             options.addOption((Option) generalOption);
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        // options for list
-        Options listOptions = new Options();
-        listOptions.addOption("l", "limit", true, "Maximum number of tables to return");
-        listOptions.addOption("s", "sort", true, "Sort the tables");
-        addGeneralOptions(listOptions);
-
-        // options for scan
+    private static Options getScanOptions(){
         Options scanOptions = new Options();
-        Option tableOption = new Option("t", "table", true, "Table to scan");
-        tableOption.setRequired(true);
-        scanOptions.addOption(tableOption);
-        scanOptions.addOption("l", "limit", true, "Maximum number of rows");
-        scanOptions.addOption("cf", "columnFamily", true, "Set column family");
-        scanOptions.addOption("j", "jarFile", true, "Jar file location");
-        scanOptions.addOption("ff", "fileFormat", true, "Use file to format output");
-        scanOptions.addOption("fi", "filter", true, "Use filter");
+        scanOptions.addOption(getTableOption());
+        scanOptions.addOption(OPTION_LIMIT, OPTION_LIMIT_LONG, true, "Maximum number of rows");
+        scanOptions.addOption(OPTION_COLUMN_FAMILY, OPTION_COLUMN_FAMILY_LONG, true, "Set column family");
+        scanOptions.addOption(OPTION_JAR_FILE, OPTION_JAR_FILE_LONG, true, "Jar file location");
+        scanOptions.addOption(OPTION_FILE_FORMAT, OPTION_FILE_FORMAT_LONG, true, "Use file to format output");
+        scanOptions.addOption(OPTION_FILTER, OPTION_FILTER_LONG, true, "Use filter");
         addGeneralOptions(scanOptions);
+        return scanOptions;
+    }
 
-        // options for count
+    private static Options getCountOptions(){
         Options countOptions = new Options();
-        countOptions.addOption(tableOption);
+        countOptions.addOption(getTableOption());
         addGeneralOptions(countOptions);
+        return countOptions;
+    }
 
-        CommandLineParser parser = new BasicParser();
-        CommandLine cmd;
-
-        switch(args[0]){
-            case LIST: {
-                try {
-                    cmd = parser.parse(listOptions, args);
-                    parseGeneralOptions(cmd);
-                    Integer limit = Integer.MAX_VALUE;
-                    Sort sort = Sort.NONE;
-                    if(cmd.hasOption("l")){
-                        limit = Integer.valueOf(cmd.getOptionValue("l"));
-                    }
-                    if(cmd.hasOption("s")){
-                        sort = Sort.valueOf(cmd.getOptionValue("s").toUpperCase());
-                    }
-                    new HBaseLayer().list(limit, sort);
-                } catch (ParseException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-            break;
-            case SCAN: {
-                try {
-                    cmd = parser.parse(scanOptions, args);
-                    parseGeneralOptions(cmd);
-                    String tableName = null;
-                    Long limit = Long.MAX_VALUE;
-                    String columnFamily = null;
-                    String jarPath = null;
-                    String formatClassName = null;
-                    String filterClassName = null;
-                    if(cmd.hasOption("t")){
-                        tableName = cmd.getOptionValue("t");
-                    }
-                    if(cmd.hasOption("l")){
-                        limit = Long.valueOf(cmd.getOptionValue("l"));
-                    }
-                    if(cmd.hasOption("cf")){
-                        columnFamily = cmd.getOptionValue("cf");
-                    }
-                    if(cmd.hasOption("ff")){
-                        formatClassName = cmd.getOptionValue("ff");
-                    }
-                    if(cmd.hasOption("j")){
-                        jarPath = cmd.getOptionValue("j");
-                    }
-                    if(cmd.hasOption("fi")){
-                        filterClassName = cmd.getOptionValue("fi");
-                    }
-                    new HBaseLayer().scan(tableName, limit, columnFamily, jarPath, formatClassName, filterClassName);
-                } catch (ParseException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-            break;
-            case COUNT: {
-                try {
-                    cmd = parser.parse(countOptions, args);
-                    parseGeneralOptions(cmd);
-                    String tableName = null;
-                    if(cmd.hasOption("t")){
-                        tableName = cmd.getOptionValue("t");
-                    }
-                    new HBaseLayer().count(tableName);
-                } catch (ParseException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-            break;
-        }
-
+    private static Options getListOptions(){
+        Options listOptions = new Options();
+        listOptions.addOption(OPTION_LIMIT, OPTION_LIMIT_LONG, true, "Maximum number of tables to return");
+        listOptions.addOption(OPTION_SORT, OPTION_SORT_LONG, true, "Sort the tables");
+        addGeneralOptions(listOptions);
+        return listOptions;
     }
 
     private static void parseGeneralOptions(CommandLine cmd) throws MasterNotRunningException, ZooKeeperConnectionException {
-        if (cmd.hasOption("q")) {
-            String quorum = cmd.getOptionValue("q");
+        if (cmd.hasOption(OPTION_QUOROM)) {
+            String quorum = cmd.getOptionValue(OPTION_QUOROM);
             conf.set(HBASE_ZOOKEEPER_QUORUM, quorum);
         }
         admin = new HBaseAdmin(conf);
     }
 
+    private static Option getTableOption(){
+        Option tableOption = new Option(OPTION_TABLE, OPTION_TABLE_LONG, true, "Table to scan");
+        tableOption.setRequired(true);
+        return tableOption;
+    }
+
+
     private void disable_all(){
-//        listtables.foreach(t => admin.disableTable(t.getNameAsString))
+        // TODO
+        // listtables.foreach(t => admin.disableTable(t.getNameAsString))
     }
 
     private void drop_all(){
-//        listtables.foreach(t => admin.deleteTable(t.getNameAsString))
+        // TODO
+        // listtables.foreach(t => admin.deleteTable(t.getNameAsString))
     }
 
     private void list(Integer limit, Sort sort) throws IOException {
@@ -289,7 +294,8 @@ public class HBaseLayer {
 
     private void scan(String tableName, Long limit, @Nonnull String columnFamily, @Nullable String jarPath, @Nullable String formatClassName,
             @Nullable String filterClassName)
-            throws IOException {
+            throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
+            IllegalAccessException {
         final RowFormat rowFormat = getRowFormat(jarPath, formatClassName);
         Scan scan = null;
         ResultScanner resultScanner;
