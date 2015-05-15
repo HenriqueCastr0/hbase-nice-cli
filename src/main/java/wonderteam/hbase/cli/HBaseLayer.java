@@ -8,14 +8,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -30,9 +32,8 @@ import org.apache.hadoop.mapreduce.Job;
 public class HBaseLayer {
 
 
-
+    private final static String HBASE_ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
     private static HBaseAdmin admin;
-    private Map<String,Object> optionMap = new HashMap<String, Object>();
     private static Configuration conf = new Configuration();
 
     private static final String LIST = "list";
@@ -41,7 +42,6 @@ public class HBaseLayer {
 
     public HBaseLayer() throws IOException {
         conf.setQuietMode(true);
-//        conf.set("hbase.zookeeper.quorum", "127.0.0.1");
     }
 
 
@@ -117,8 +117,6 @@ public class HBaseLayer {
     }
 
     public static void main(String[] args) throws Exception {
-
-
         // options for list
         Options listOptions = new Options();
         listOptions.addOption("l", "limit", true, "Maximum number of tables to return");
@@ -219,7 +217,7 @@ public class HBaseLayer {
     private static void parseGeneralOptions(CommandLine cmd) throws MasterNotRunningException, ZooKeeperConnectionException {
         if (cmd.hasOption("q")) {
             String quorum = cmd.getOptionValue("q");
-            conf.set("hbase.zookeeper.quorum", quorum);
+            conf.set(HBASE_ZOOKEEPER_QUORUM, quorum);
         }
         admin = new HBaseAdmin(conf);
     }
@@ -248,17 +246,32 @@ public class HBaseLayer {
                 stream = stream.sorted(new HTableDescriptorDescComparator());
                 break;
         }
-        StringBuilder listOfTables = new StringBuilder();
-        stream.forEach(table -> listOfTables.append(table.getNameAsString() + "\n"));
-        System.out.println(listOfTables.toString());
-        writeToAutoCompletionFileForTableNames(listOfTables.toString());
+        final StringBuilder listOfTablesWithColumnFamilies = new StringBuilder();
+
+        Consumer<HTableDescriptor> consumer = hTableDescriptor -> {
+            System.out.println(hTableDescriptor.getNameAsString());
+            listOfTablesWithColumnFamilies.append(hTableDescriptor.getNameAsString() + " ");
+            HColumnDescriptor[] columnFamilies = hTableDescriptor.getColumnFamilies();
+            if (columnFamilies.length > 0) {
+                for (int i = 0; i < columnFamilies.length; i++) {
+                    listOfTablesWithColumnFamilies.append(columnFamilies[i].getNameAsString());
+                    if (i != columnFamilies.length - 1) {
+                        listOfTablesWithColumnFamilies.append(" ");
+                    }
+                }
+            }
+            listOfTablesWithColumnFamilies.append("\n");
+        };
+
+        stream.forEach(consumer::accept);
+        writeToAutoCompletionFileForTableNames(listOfTablesWithColumnFamilies.toString());
     }
 
-    private void writeToAutoCompletionFileForTableNames(String tableNames) throws IOException {
-        String quorum = conf.get("hbase.zookeeper.quorum");
+    private void writeToAutoCompletionFileForTableNames(String tableNamesAndColumnFamilies) throws IOException {
+        String quorum = conf.get(HBASE_ZOOKEEPER_QUORUM);
         File file = new File("/usr/lib/hbase-cli/" + quorum + "-hbase-cli-table-names");
         FileOutputStream fileOutputStream = new FileOutputStream(file);
-        fileOutputStream.write(tableNames.getBytes(Charset.forName("UTF-8")));
+        fileOutputStream.write(tableNamesAndColumnFamilies.getBytes(StandardCharsets.UTF_8));
     }
 
     private void count(String tableName) throws Exception {

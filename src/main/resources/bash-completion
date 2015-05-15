@@ -12,6 +12,7 @@ _args()
     list_opts="-l --limit -s --sort"
     count_opts=""
     table_opts=""
+    column_families_opts=""
 
 
     if [[ ${prev} == "hbase-cli" ]] ; then
@@ -20,12 +21,26 @@ _args()
     fi
 
     if [[ ${prev} == "-t" || ${prev} == "--table" ]] ; then
-	local quorum=""
-	_findQuorum quorum
-	if [[ ${#quorum} -gt 0 ]] ; then
-		_readTableNames table_opts $quorum
-	        COMPREPLY=( $(compgen -W "${table_opts}" -- ${cur}) )
-	fi
+        local quorum=""
+        _findQuorum quorum
+        if [[ ${#quorum} -gt 0 ]] ; then
+            _readTableNames table_opts $quorum
+                COMPREPLY=( $(compgen -W "${table_opts}" -- ${cur}) )
+        fi
+        return 0
+    fi
+
+    if [[ ${prev} == "-cf" || ${prev} == "--columnFamily" ]] ; then
+        local quorum=""
+        _findQuorum quorum
+        if [[ ${#quorum} -gt 0 ]] ; then
+            local tableName=""
+            _findTableName tableName
+            if [[ ${#tableName} -gt 0 ]] ; then
+                _readColumnFamilies column_families_opts $quorum $tableName
+                COMPREPLY=( $(compgen -W "${column_families_opts}" -- ${cur}) )
+            fi
+        fi
         return 0
     fi
 
@@ -59,7 +74,28 @@ _readTableNames()
  if [ -f $file ]; then
  	while read line
  	do
-    	res+="${line} "
+ 	    words=( $line )
+    	res+="${words[0]} "
+ 	done < "${file}"
+ fi
+ eval "$1='${res}'"
+}
+
+_readColumnFamilies()
+{
+ res=""
+ file="/usr/lib/hbase-cli/${2}-hbase-cli-table-names"
+ if [ -f $file ]; then
+ 	while read line
+ 	do
+ 	    words=( $line )
+ 	    if [[ "${words[0]}" == "${3}" ]] ; then
+ 	        for ((i = 1 ; i < ${#words} ; i++ )) ;
+ 	        do
+ 	            res+="${words[$i]} "
+ 	        done
+ 	    fi
+
  	done < "${file}"
  fi
  eval "$1='${res}'"
@@ -72,6 +108,17 @@ _findQuorum()
 	if [[ ${COMP_WORDS[$i]} == "-q" || ${COMP_WORDS[$i]} == "--quorum" ]] ; then
 		quorum="${COMP_WORDS[$i+1]}"
 		eval "$1='${quorum}'"
+	fi
+   done
+}
+
+_findTableName()
+{
+   for ((i = 0 ; i < ${#COMP_WORDS} ; i++ )) ;
+   do
+	if [[ ${COMP_WORDS[$i]} == "-t" || ${COMP_WORDS[$i]} == "--tableName" ]] ; then
+		tableName="${COMP_WORDS[$i+1]}"
+		eval "$1='${tableName}'"
 	fi
    done
 }
