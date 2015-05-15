@@ -39,6 +39,7 @@ public class HBaseLayer {
     private static final String LIST = "list";
     private static final String SCAN = "scan";
     private static final String COUNT = "count";
+    private static final String TABLE_NAMES_FOLDER = System.getProperty("autocompletion.info.path");
 
     public HBaseLayer() throws IOException {
         conf.setQuietMode(true);
@@ -269,7 +270,9 @@ public class HBaseLayer {
 
     private void writeToAutoCompletionFileForTableNames(String tableNamesAndColumnFamilies) throws IOException {
         String quorum = conf.get(HBASE_ZOOKEEPER_QUORUM);
-        File file = new File("/usr/lib/hbase-cli/" + quorum + "-hbase-cli-table-names");
+        File folder = new File(TABLE_NAMES_FOLDER);
+        folder.mkdirs();
+        File file = new File(TABLE_NAMES_FOLDER + "/", quorum + "-hbase-cli-table-names");
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         fileOutputStream.write(tableNamesAndColumnFamilies.getBytes(StandardCharsets.UTF_8));
     }

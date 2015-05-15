@@ -1,2 +1,2 @@
 #!/bin/sh
-java -Dlogback.configurationFile=/usr/lib/hbase-shell/logback.xml -jar /usr/lib/hbase-cli/hbase-cli.jar $*
+java -Dlogback.configurationFile=/usr/lib/hbase-shell/logback.xml -Dautocompletion.info.path=${autocompletion.info.path} -jar /usr/lib/hbase-cli/hbase-cli.jar $*

@@ -10,9 +10,20 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.8</java.version>
+        <application.directory>~/Applications/hbase-cli</application.directory>
+        <tmp.dir>/tmp/hbase-cli</tmp.dir>
+        <dependency.dir>/usr/lib/hbase-cli</dependency.dir>
+        <autocompletion.info.path>~/hbase-cli/bash_completion</autocompletion.info.path>
 	</properties>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -31,33 +42,6 @@
                     </manifest>
                   </archive>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.1</version>
-                <executions>
-                    <execution>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <tasks>
-                                <copy file="target/hbase-cli-1.1-SNAPSHOT.jar"
-                                      tofile="/usr/lib/hbase-cli/hbase-cli.jar"
-                                      overwrite="true"/>
-                                <copy file="src/main/resources/hbase-cli"
-                                      tofile="/usr/bin/hbase-cli"
-                                      overwrite="true"/>
-                                <chmod file="/usr/bin/hbase-cli" perm="+x"/>
-                                <copy file="src/main/resources/bash-completion"
-                                      tofile="/etc/bash_completion.d/hbase-cli"
-                                      overwrite="true"/>
-                            </tasks>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -80,7 +64,7 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>/usr/lib/hbase-cli</outputDirectory>
+                            <outputDirectory>${tmp.dir}</outputDirectory>
                             <overWriteReleases>true</overWriteReleases>
                             <overWriteSnapshots>true</overWriteSnapshots>
                             <overWriteIfNewer>true</overWriteIfNewer>
@@ -88,9 +72,28 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <copy file="target/classes/copy-all.sh"
+                                      tofile="${tmp.dir}/copy-all.sh"
+                                      overwrite="true"/>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
