@@ -84,8 +84,8 @@ _readTableNames()
 _readColumnFamilies()
 {
  res=""
- file="${autocompletion.info.path}/${2}-hbase-cli-table-names"
- if [ -f $file ]; then
+ completion_file="${autocompletion.info.path}/${2}-hbase-cli-table-names"
+ if [ -f $completion_file ]; then
  	while read line
  	do
  	    words=( $line )
@@ -96,7 +96,7 @@ _readColumnFamilies()
  	        done
  	    fi
 
- 	done < "${file}"
+ 	done < "${completion_file}"
  fi
  eval "$1='${res}'"
 }
