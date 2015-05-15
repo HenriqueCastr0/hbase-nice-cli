@@ -37,7 +37,7 @@ _args()
             local tableName=""
             _findTableName tableName
             if [[ ${#tableName} -gt 0 ]] ; then
-                _readColumnFamilies column_families_opts $quorum $tableName
+                _readColumnFamilies column_families_opts $quorum $tableName $path
                 COMPREPLY=( $(compgen -W "${column_families_opts}" -- ${cur}) )
             fi
         fi
@@ -70,7 +70,7 @@ _args()
 _readTableNames()
 {
  res=""
- file="/usr/lib/hbase-cli/${2}-hbase-cli-table-names"
+ file="${autocompletion.info.path}${2}-hbase-cli-table-names"
  if [ -f $file ]; then
  	while read line
  	do
@@ -84,7 +84,7 @@ _readTableNames()
 _readColumnFamilies()
 {
  res=""
- file="/usr/lib/hbase-cli/${2}-hbase-cli-table-names"
+ file="${autocompletion.info.path}${2}-hbase-cli-table-names"
  if [ -f $file ]; then
  	while read line
  	do
